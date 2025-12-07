@@ -1,4 +1,4 @@
-import {checkAndIncrement} from "../store/redisStore.js";
+import { checkAndIncrement } from "../store/redisStore.js";
 
 async function checkfixedWindowLimit(key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
     const nowInSeconds = Math.floor(Date.now() / 1000);
@@ -14,7 +14,7 @@ async function checkfixedWindowLimit(key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) 
     return {
         allowed: isAllowed,
         remaining: isAllowed ? MAX_REQUESTS - count : 0,
-        message: "Too many requests",
+        message: isAllowed ? "Request allowed" : "Too many requests",
         resetTime: `${remaining} seconds`
     }
 }

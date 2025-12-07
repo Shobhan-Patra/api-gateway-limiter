@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import { performance } from 'perf_hooks'
-import { WINDOW_SIZE_IN_SECONDS } from '../../config/constants.js';
+import {WINDOW_SIZE_IN_SECONDS} from '../../config/constants.js';
 
 const redisStore = createClient({
     username: process.env.REDIS_USERNAME,
@@ -72,4 +72,16 @@ async function checkAndIncrement(key) {
     }
 }
 
-export { connectRedis, closeRedis, checkAndIncrement, redisStore };
+async function executeSlidingWindowTransaction(key, currentTimeInMs, windowStartTime) {
+    const redisStore = await connectRedis();
+
+    const multi = redisStore.multi();
+    multi.zRemRangeByScore(key, '-inf', windowStartTime);
+    multi.zAdd(key, {score: currentTimeInMs, value:currentTimeInMs.toString()});
+    multi.zCard(key);
+    multi.zRange(key, 0, 0, 'WITHSCORES');
+    const result = await multi.exec();
+    return result;
+}
+
+export { redisStore, connectRedis, closeRedis, checkAndIncrement, executeSlidingWindowTransaction };
