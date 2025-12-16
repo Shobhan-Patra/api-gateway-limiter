@@ -1,17 +1,18 @@
 import checkfixedWindowLimit from "../logic/fixedWindow.js";
 import {MAX_LIMIT, WINDOW_SIZE_IN_SECONDS} from "../../config/constants.js";
+import { redisStore } from "../server.js";
 import checkSlidingWindowLimit from "../logic/slidingWindow.js";
 
 const rateLimiter = async (req, res, next) => {
     const clientIdentifier = req.ip;
 
     // ------------- FIXED WINDOW RATE LIMITER ---------------- //
-    // const fixedWindowResponse = await checkfixedWindowLimit(clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
-
+    // const fixedWindowResponse = await checkfixedWindowLimit(redisStore, clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
+    //
     // res.setHeader("X-RateLimit-Limit", MAX_LIMIT);
     // res.setHeader("X-RateLimit-Remaining", fixedWindowResponse.remaining);
     // res.setHeader("X-RateLimit-Reset", fixedWindowResponse.resetTime);
-
+    //
     // if (!fixedWindowResponse.allowed) {
     //     console.log("Rate Limiter exceeded for client: ", clientIdentifier);
     //     res.setHeader('Retry-After', fixedWindowResponse.resetTime);
@@ -22,7 +23,7 @@ const rateLimiter = async (req, res, next) => {
     // }
 
     // ------------- SLIDING WINDOW RATE LIMITER ---------------- //
-    const slidingWindowResponse = await checkSlidingWindowLimit(clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
+    const slidingWindowResponse = await checkSlidingWindowLimit(redisStore, clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
 
     res.setHeader("X-RateLimit-Limit", MAX_LIMIT);
     res.setHeader("X-RateLimit-Remaining", slidingWindowResponse.remaining);
