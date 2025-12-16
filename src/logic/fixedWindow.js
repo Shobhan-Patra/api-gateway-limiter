@@ -1,13 +1,28 @@
-import { checkAndIncrement } from "../store/redisStore.js";
+import {WINDOW_SIZE_IN_SECONDS} from "../../config/constants.js";
 
-async function checkfixedWindowLimit(key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
+async function checkAndIncrement(redisStore, key) {
+    const count = await redisStore.incr(key);
+
+    if (count === 1) {
+        await redisStore.expire(key, WINDOW_SIZE_IN_SECONDS);
+    }
+
+    const ttl = await redisStore.ttl(key);
+
+    return {
+        count: count,
+        remaining: ttl
+    }
+}
+
+async function checkfixedWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
     const nowInSeconds = Math.floor(Date.now() / 1000);
 
     const windowStartTime = Math.floor(nowInSeconds / WINDOW_SIZE_IN_SECONDS) * WINDOW_SIZE_IN_SECONDS;
 
     const windowKey = `${key}:${windowStartTime}`;
 
-    const {count, remaining} = await checkAndIncrement(windowKey);
+    const {count, remaining} = await checkAndIncrement(redisStore, windowKey);
 
     const isAllowed = count <= MAX_REQUESTS;
 

@@ -1,12 +1,15 @@
-import { executeSlidingWindowTransaction} from "../store/redisStore.js";
-
-async function checkSlidingWindowLimit(key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
+async function checkSlidingWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
     const currentTimeInMs = Date.now();
     const windowStartTime = currentTimeInMs - WINDOW_SIZE_IN_SECONDS * 1000;
 
     const windowKey = `rate_limit:${key}`;
 
-    const result = await executeSlidingWindowTransaction(windowKey, currentTimeInMs, windowStartTime);
+    const multi = redisStore.multi();
+    multi.zRemRangeByScore(windowKey, '-inf', windowStartTime);
+    multi.zAdd(windowKey, {score: currentTimeInMs, value:currentTimeInMs.toString()});
+    multi.zCard(windowKey);
+    multi.zRange(windowKey, 0, 0, 'WITHSCORES');
+    const result = await multi.exec();
 
     const count = result[2];
     const earliestRequest = result[3];
