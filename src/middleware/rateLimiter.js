@@ -1,8 +1,9 @@
-import {BUCKET_SIZE, MAX_LIMIT, REFILL_RATE, WINDOW_SIZE_IN_SECONDS} from "../../config/constants.js";
+import {BUCKET_SIZE, LEAK_RATE, MAX_LIMIT, REFILL_RATE, WINDOW_SIZE_IN_SECONDS} from "../../config/constants.js";
 import { redisStore } from "../server.js";
 import checkfixedWindowLimit from "../logic/fixedWindow.js";
 import checkSlidingWindowLimit from "../logic/slidingWindow.js";
 import tokenBucket from "../logic/tokenBucket.js";
+import leakyBucket from "../logic/leakyBucket.js";
 
 const rateLimiter = async (req, res, next) => {
     const clientIdentifier = req.ip;
@@ -39,19 +40,35 @@ const rateLimiter = async (req, res, next) => {
     //     })
     // }
 
-    // ----------------- TOKEN BUCKET RATE LIMITER ---------- --- //
-    const tokenBucketResponse = await tokenBucket(redisStore, clientIdentifier, REFILL_RATE, BUCKET_SIZE);
+    // ----------------- TOKEN BUCKET RATE LIMITER -------------- //
+    // const tokenBucketResponse = await tokenBucket(redisStore, clientIdentifier, REFILL_RATE, BUCKET_SIZE);
+    //
+    // res.setHeader("X-RateLimit-Limit", BUCKET_SIZE);
+    // res.setHeader("X-RateLimit-Remaining", tokenBucketResponse.remaining);
+    // res.setHeader("X-RateLimit-Reset", tokenBucketResponse.resetTime);
+    //
+    // if (!tokenBucketResponse.allowed) {
+    //     console.log("Rate Limiter exceeded for client: ", clientIdentifier);
+    //     res.setHeader('Retry-After', tokenBucketResponse.resetTime);
+    //     return res.status(429).json({
+    //         error: "Too many requests",
+    //         message: `Rate limit of ${BUCKET_SIZE} requests per ${BUCKET_SIZE / REFILL_RATE}s exceeded`
+    //     })
+    // }
+
+    // --------------- LEAKY BUCKET ALGORITHM ------------------- //
+    const leakyBucketResponse = await leakyBucket(redisStore, clientIdentifier, LEAK_RATE, BUCKET_SIZE);
 
     res.setHeader("X-RateLimit-Limit", BUCKET_SIZE);
-    res.setHeader("X-RateLimit-Remaining", tokenBucketResponse.remaining);
-    res.setHeader("X-RateLimit-Reset", tokenBucketResponse.resetTime);
+    res.setHeader("X-RateLimit-Remaining", leakyBucketResponse.remaining);
+    res.setHeader("X-RateLimit-Reset", leakyBucketResponse.resetTime);
 
-    if (!tokenBucketResponse.allowed) {
+    if (!leakyBucketResponse.allowed) {
         console.log("Rate Limiter exceeded for client: ", clientIdentifier);
-        res.setHeader('Retry-After', tokenBucketResponse.resetTime);
+        res.setHeader('Retry-After', leakyBucketResponse.resetTime);
         return res.status(429).json({
             error: "Too many requests",
-            message: `Rate limit of ${BUCKET_SIZE} requests per ${REFILL_RATE * BUCKET_SIZE}s exceeded`
+            message: `Rate limit of ${BUCKET_SIZE} requests per ${BUCKET_SIZE / LEAK_RATE}s exceeded`
         })
     }
 

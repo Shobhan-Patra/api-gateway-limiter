@@ -3,3 +3,5 @@ export const MAX_LIMIT = 100;
 
 export const BUCKET_SIZE = 10;
 export const REFILL_RATE = 1;
+
+export const LEAK_RATE = 1;

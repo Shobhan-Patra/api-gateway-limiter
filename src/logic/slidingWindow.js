@@ -2,13 +2,11 @@ async function checkSlidingWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZ
     const currentTimeInMs = Date.now();
     const windowStartTime = currentTimeInMs - WINDOW_SIZE_IN_SECONDS * 1000;
 
-    const windowKey = `rate_limit:${key}`;
-
     const multi = redisStore.multi();
-    multi.zRemRangeByScore(windowKey, '-inf', windowStartTime);
-    multi.zAdd(windowKey, {score: currentTimeInMs, value:currentTimeInMs.toString()});
-    multi.zCard(windowKey);
-    multi.zRange(windowKey, 0, 0, 'WITHSCORES');
+    multi.zRemRangeByScore(key, '-inf', windowStartTime);
+    multi.zAdd(key, {score: currentTimeInMs, value:currentTimeInMs.toString()});
+    multi.zCard(key);
+    multi.zRange(key, 0, 0, 'WITHSCORES');
     const result = await multi.exec();
 
     const count = result[2];
