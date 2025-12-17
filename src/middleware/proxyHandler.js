@@ -1,6 +1,6 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
 
-const UPSTREAM_URL = "http://localhost:5000";
+const UPSTREAM_URL = process.env.UPSTREAM_URL;
 
 function requestLogger(proxyServer, _) {
     proxyServer.on('proxyReq', (proxyReq, req, _) => {
