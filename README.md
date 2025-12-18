@@ -8,11 +8,12 @@
 3. Can scale (using Redis) to protect multiple servers in a distributed backend structure
 
 ## How to run locally
-#### Prerequisites: You need Node.js and a running Redis instance
+### Prerequisites: You need Node.js and a running Redis instance (local or cloud)
+### Approach 1: Using npm
 1. Clone and Install
    ```
    git clone https://github.com/Shobhan-Patra/api-gateway-limiter.git
-   cd api-gateway-limter
+   cd api-gateway-limiter
    pnpm install // Can use npm install too
    ```
 2. Configure ```.env``` file:
@@ -30,6 +31,10 @@
    You need two terminals
    #### Terminal 1: `pnpm run backend` starts the dummy backend server
    #### Terminal 2: `pnpm run start` starts the gateway
+
+### Approach 2: Using Docker
+1. Run `docker compose up --build`  
+This starts both the gateway and a mock backend server (traefik/whoami docker image).
     
 ## How to test
 Send requests to the Gateway (Port 8000). It will forward them to the Backend (Port 5000) automatically.
@@ -41,27 +46,27 @@ Spamming this request for multiple times (max limit is determined in config/cons
 
 ## Configuration
 The rate limit parameters for each algorithm can be configured in `config/constants.js`.\
-You can adjust parameteres such as:
+You can adjust parameters such as:
 - Window Size (for fixed and sliding window)
 - Max Requests (per time period)
 - Bucket Size and Token generation/leak rate (for token bucket and leaky bucket)
 
 ## Tech Stack
-Runtime: Node.js (Express)
-Store: Redis
-Proxy: http-proxy-middleware
-No external library is used to implement rate limiting algorithms
+- Runtime: Node.js (Express)
+- Store: Redis
+- Proxy: http-proxy-middleware
+- No external library is used to implement rate limiting algorithms
 
 ## The algorithms
-1. Fixed Window:\
+1. Fixed Window:  
     Fixed window rate limiting algorithm works by dividing time into equal sized partitions or windows.
     Each window will have a fixed max number of allowed tokens in it.
     If the number of incoming requests exceed the maximum allowed requests then it blocks/discards the surplus requests.\
     The major drawback of fixed window algorithm is it can't stop bursts of request at the edge of the window\
     Suppose window start = 0 and window end = 10 and the next window starts from 10 and maxAllowedRequests = 5\
-    Now when 5 requests come at time = 9 and 5 more requests come at the time = 11, these requests are allowed in their windows but actually there were 10 requests in the span of 3 seconds which is not a good thing for the backend as it allows requests burst at edges of the window to pass
+    Now when 5 requests come at time = 9 and 5 more requests come at the time = 11, these requests are allowed in their windows but actually there were 10 requests in the span of 3 seconds which is not a good thing for the backend as it allows requests burst at edges of the window to pass.
 
-2. Sliding Window:\
+2. Sliding Window:  
    Sliding window rate limiting algorithm improves upon the fixed window approach by considering a moving time window instead of fixed partitions.  
    It keeps track of request timestamps and counts how many requests occurred in the last N seconds.  
    If the number of requests in the sliding window exceeds the maximum allowed limit, further requests are blocked or discarded.
@@ -70,7 +75,7 @@ No external library is used to implement rate limiting algorithms
    If 5 requests come at time = 9 and another request comes at time = 11, the algorithm will still count the earlier requests because they fall within the last 10 seconds.  
    This ensures that no more than 5 requests are allowed in any continuous 10-second period, providing smoother and fairer rate limiting.
 
-3. Token Bucket:\
+3. Token Bucket:  
     Token bucket rate limiting algorithm works by generating tokens at a fixed rate and storing them in a bucket with a maximum capacity.  
     Each incoming request consumes one token from the bucket.  
     If tokens are available, the request is allowed; if the bucket is empty, the request is blocked or discarded.
@@ -79,7 +84,7 @@ No external library is used to implement rate limiting algorithms
     If the system has been idle, the bucket may be full and allow up to 5 requests at once.  
     After that, new requests are allowed only as new tokens are generated, protecting the backend from sustained high traffic.
 
-4. Leaky Bucket:\
+4. Leaky Bucket:  
     Leaky bucket rate limiting algorithm processes requests at a fixed, constant rate, similar to water leaking from a bucket at a steady speed.  
     Incoming requests are added to a queue (the bucket), and requests are processed one by one at a predefined rate.  
     If the bucket is full, additional incoming requests are discarded.
