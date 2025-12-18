@@ -2,6 +2,16 @@
 
 #### An API Gateway implemented in Node.js using Redis and Express with the following rate limiting algorithms: Token bucket, Leaky bucket, Sliding window and Fixed window.
 
+```mermaid
+graph LR
+A[Client] -->|Request| B(API Gateway)
+B -->|Check Quota| C[(Redis Store)]
+C --|Allowed|--> B
+B -->|Forward| D[Backend Service]
+C --|Denied|--> B
+B --|429 Too Many Requests|--> A
+```
+
 ## Functions of a Gateway
 1. Sits on front of a server and forwards valid requests to it
 2. Limits incoming request to not overwhelm the server
@@ -34,7 +44,7 @@
 
 ### Approach 2: Using Docker
 1. Run `docker compose up --build`  
-This starts both the gateway and a mock backend server (traefik/whoami docker image).
+This starts both the gateway and a mock backend server ([traefik/whoami](https://hub.docker.com/r/traefik/whoami) docker image).
     
 ## How to test
 Send requests to the Gateway (Port 8000). It will forward them to the Backend (Port 5000) automatically.
