@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch --env-file=.env src/server.js",
-    "backend": "node dummy_backend/server.js"
+    "backend": "node --watch --env-file=.env dummy_backend/server.js"
   },
   "keywords": [],
   "author": "",

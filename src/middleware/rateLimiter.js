@@ -8,67 +8,50 @@ import leakyBucket from "../logic/leakyBucket.js";
 const rateLimiter = async (req, res, next) => {
     const clientIdentifier = req.ip;
 
-    // ------------- FIXED WINDOW RATE LIMITER ------------------ //
-    // const fixedWindowResponse = await checkfixedWindowLimit(redisStore, clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
-    //
-    // res.setHeader("X-RateLimit-Limit", MAX_LIMIT);
-    // res.setHeader("X-RateLimit-Remaining", fixedWindowResponse.remaining);
-    // res.setHeader("X-RateLimit-Reset", fixedWindowResponse.resetTime);
-    //
-    // if (!fixedWindowResponse.allowed) {
-    //     console.log("Rate Limiter exceeded for client: ", clientIdentifier);
-    //     res.setHeader('Retry-After', fixedWindowResponse.resetTime);
-    //     return res.status(429).json({
-    //         error: "Too many requests",
-    //         message: `Rate limit of ${MAX_LIMIT} requests per ${WINDOW_SIZE_IN_SECONDS}s exceeded`
-    //     })
-    // }
+    const rateLimiterType = req.headers['x-ratelimit-type'] ?? "fixedWindow";
+    let rateLimiterResult = {}
 
-    // ------------- SLIDING WINDOW RATE LIMITER ---------------- //
-    // const slidingWindowResponse = await checkSlidingWindowLimit(redisStore, clientIdentifier, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
-    //
-    // res.setHeader("X-RateLimit-Limit", MAX_LIMIT);
-    // res.setHeader("X-RateLimit-Remaining", slidingWindowResponse.remaining);
-    // res.setHeader("X-RateLimit-Reset", slidingWindowResponse.resetTime);
-    //
-    // if (!slidingWindowResponse.allowed) {
-    //     console.log("Rate Limiter exceeded for client: ", clientIdentifier);
-    //     res.setHeader('Retry-After', slidingWindowResponse.resetTime);
-    //     return res.status(429).json({
-    //         error: "Too many requests",
-    //         message: `Rate limit of ${MAX_LIMIT} requests per ${WINDOW_SIZE_IN_SECONDS}s exceeded`
-    //     })
-    // }
+    const key = `rate-limit:${rateLimiterType}:${clientIdentifier}`;
 
-    // ----------------- TOKEN BUCKET RATE LIMITER -------------- //
-    // const tokenBucketResponse = await tokenBucket(redisStore, clientIdentifier, REFILL_RATE, BUCKET_SIZE);
-    //
-    // res.setHeader("X-RateLimit-Limit", BUCKET_SIZE);
-    // res.setHeader("X-RateLimit-Remaining", tokenBucketResponse.remaining);
-    // res.setHeader("X-RateLimit-Reset", tokenBucketResponse.resetTime);
-    //
-    // if (!tokenBucketResponse.allowed) {
-    //     console.log("Rate Limiter exceeded for client: ", clientIdentifier);
-    //     res.setHeader('Retry-After', tokenBucketResponse.resetTime);
-    //     return res.status(429).json({
-    //         error: "Too many requests",
-    //         message: `Rate limit of ${BUCKET_SIZE} requests per ${BUCKET_SIZE / REFILL_RATE}s exceeded`
-    //     })
-    // }
+    switch (rateLimiterType) {
+        case "slidingWindow":
+            // ------------- SLIDING WINDOW RATE LIMITER ---------------- //
+            rateLimiterResult = await checkSlidingWindowLimit(redisStore, key, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
+            rateLimiterResult.maxLimit = MAX_LIMIT;
+            rateLimiterResult.windowSize = WINDOW_SIZE_IN_SECONDS;
+            break;
+        case "tokenBucket":
+            // ----------------- TOKEN BUCKET RATE LIMITER -------------- //
+            rateLimiterResult = await tokenBucket(redisStore, key, REFILL_RATE, BUCKET_SIZE);
+            rateLimiterResult.maxLimit = BUCKET_SIZE;
+            rateLimiterResult.windowSize = BUCKET_SIZE / REFILL_RATE;
+            break;
+        case "leakyBucket":
+            // --------------- LEAKY BUCKET ALGORITHM ------------------- //
+            rateLimiterResult = await leakyBucket(redisStore, key, LEAK_RATE, BUCKET_SIZE);
+            rateLimiterResult.maxLimit = BUCKET_SIZE;
+            rateLimiterResult.windowSize = BUCKET_SIZE / LEAK_RATE;
+            break;
+        default:
+            // ------------- FIXED WINDOW RATE LIMITER ------------------ //
+            rateLimiterResult = await checkfixedWindowLimit(redisStore, key, MAX_LIMIT, WINDOW_SIZE_IN_SECONDS);
+            rateLimiterResult.maxLimit = MAX_LIMIT;
+            rateLimiterResult.windowSize = WINDOW_SIZE_IN_SECONDS;
+            break;
+    }
 
-    // --------------- LEAKY BUCKET ALGORITHM ------------------- //
-    const leakyBucketResponse = await leakyBucket(redisStore, clientIdentifier, LEAK_RATE, BUCKET_SIZE);
+    res.setHeader("X-RateLimit-Limit", rateLimiterResult.maxLimit);
+    res.setHeader("X-RateLimit-Remaining", rateLimiterResult.remaining);
+    res.setHeader("X-RateLimit-Reset", rateLimiterResult.resetTime);
 
-    res.setHeader("X-RateLimit-Limit", BUCKET_SIZE);
-    res.setHeader("X-RateLimit-Remaining", leakyBucketResponse.remaining);
-    res.setHeader("X-RateLimit-Reset", leakyBucketResponse.resetTime);
+    req.headers['x-ratelimit-type'] = rateLimiterType;
 
-    if (!leakyBucketResponse.allowed) {
+    if (!rateLimiterResult.allowed) {
         console.log("Rate Limiter exceeded for client: ", clientIdentifier);
-        res.setHeader('Retry-After', leakyBucketResponse.resetTime);
+        res.setHeader('Retry-After', rateLimiterResult.resetTime);
         return res.status(429).json({
             error: "Too many requests",
-            message: `Rate limit of ${BUCKET_SIZE} requests per ${BUCKET_SIZE / LEAK_RATE}s exceeded`
+            message: `Rate limit of ${rateLimiterResult.maxLimit} requests per ${rateLimiterResult.windowSize}s exceeded`
         })
     }
 

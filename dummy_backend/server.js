@@ -7,10 +7,13 @@ app.use(express.json());
 
 app.set('trust proxy', true);
 
-const checkGateway = async (req, res, next) => {
+const checkGateway = (req, res, next) => {
     const secret = req.headers['x-gateway-secret'];
-    if (secret !== process.env.GATEWAY_SECRET) {
-        return res.status(403).json({error: 'Direct access forbidden; Use gateway'});
+    const validSecret = process.env.GATEWAY_SECRET;
+
+    if (!validSecret || secret !== validSecret) {
+        console.warn(`[Security] Direct access attempt rejected from IP: ${req.ip}`);
+        return res.status(403).json({ error: 'Direct access forbidden; Use gateway' });
     }
     next();
 }
@@ -23,12 +26,14 @@ app.get('/test', (req, res) => {
     console.log(`URL: ${req.url}`);
     console.log(`Headers:`, req.headers['x-gateway-secret'] ? 'Secret Verified ✅' : 'No Secret ❌');
     console.log(`Body:`, req.body);
+    console.log(req.headers);
 
     res.json({
         message: 'Hello from Backend!',
         receivedHeaders: {
             'x-forwarded-for': req.headers['x-forwarded-for'],
-            'x-gateway-secret': req.headers['x-gateway-secret']
+            'x-gateway-secret': req.headers['x-gateway-secret'],
+            'x-ratelimit-type': req.headers['x-ratelimit-type']
         },
         receivedBody: req.body
     });
@@ -46,12 +51,13 @@ app.post('/testpost', (req, res) => {
         message: 'Testing POST requests',
         receivedHeaders: {
             'x-forwarded-for': req.headers['x-forwarded-for'],
-            'x-gateway-secret': req.headers['x-gateway-secret']
+            'x-gateway-secret': req.headers['x-gateway-secret'],
+            'x-ratelimit-type': req.headers['x-ratelimit-type']
         },
         receivedBody: req.body
     });
 })
 
 app.listen(PORT, () => {
-    console.log(`Server listening at http://localhost:5000/healthcheck`);
+    console.log(`Server listening at http://localhost:5000/`);
 })

@@ -6,7 +6,7 @@ import proxyMiddleware from "./middleware/proxyHandler.js";
 
 const gateway = express();
 
-gateway.use(rateLimiter);
+gateway.use('/api', rateLimiter);
 gateway.use('/api', proxyMiddleware);
 
 gateway.use(express.json());
