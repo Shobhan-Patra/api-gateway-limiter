@@ -2,12 +2,7 @@ import { createClient } from 'redis';
 import { performance } from 'perf_hooks'
 
 const redisStore = createClient({
-    username: process.env.REDIS_USERNAME,
-    password: process.env.REDIS_PASSWORD,
-    socket: {
-        host: process.env.REDIS_HOST,
-        port: process.env.REDIS_PORT,
-    }
+    url: process.env.REDIS_URL,
 });
 redisStore.on('error', err => console.log('Redis Client Error', err));
 
