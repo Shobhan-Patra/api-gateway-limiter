@@ -1,16 +1,9 @@
 steps:
-  # Using previous cached images (if they exist) to speed up build process
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args: ['-c', 'docker pull asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:latest || exit 0']
-
   # Build the Gateway image
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-t', 'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:${COMMIT_SHA}',
-      '-t', 'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:latest',
-      '--cache-from', 'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:latest',
       '.'
     ]
 
@@ -18,7 +11,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push',
-      'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway'
+      'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:${COMMIT_SHA}'
     ]
 
   # Deploy to Cloud Run
@@ -38,14 +31,10 @@ steps:
       - '8000'
       - '--set-env-vars'
       - 'NODE_ENV=production'
-      - '--update-secrets'
-      - 'UPSTREAM_URL=BACKEND_SERVER_URL:latest'
-      - 'REDIS_URL=REDIS_URL:latest'
-      - 'GATEWAY_SECRET=GATEWAY_SECRET:latest'
+      - '--update-secrets=UPSTREAM_URL=BACKEND_SERVER_URL:latest,REDIS_URL=REDIS_URL:latest,GATEWAY_SECRET=GATEWAY_SECRET:latest'
 
 images:
   - 'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:${COMMIT_SHA}'
-  - 'asia-south1-docker.pkg.dev/${PROJECT_ID}/rate-limiter-gateway-repo/rate-limiter-gateway:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
