@@ -49,6 +49,6 @@ async function measureRedisFetchLatency() {
     console.log(`Fetch duration: ${(stopTime - startTime).toFixed(3)} ms`);
 }
 
-await measureRedisFetchLatency();
+// await measureRedisFetchLatency();
 
 export { redisStore, connectRedis, closeRedis };

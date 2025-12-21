@@ -57,7 +57,7 @@ const rateLimiter = async (req, res, next) => {
     }
 
     const duration = Date.now() - startTime;
-    res.setHeader("Server-Timing", `gateway_logic;dur=${duration}`);
+    res.setHeader("X-Redis-Time", duration);
     console.log("Rate limiter logic takes ", duration, "ms");
 
     next();

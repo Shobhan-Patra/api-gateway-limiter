@@ -38,13 +38,20 @@ const proxyMiddleware = createProxyMiddleware({
             console.error(`[Proxy Error] ${err.message}`);
             res.writeHead(502, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Bad Gateway: Could not reach upstream server' }));
-        }
-    //     proxyReq: (proxyReq, req, res) => {
-    //         console.log(`[Proxy] Proxying ${req.method} request to: ${UPSTREAM_URL}${proxyReq.path}`);
-    //     },
-    //     proxyRes: (proxyRes, req, res) => {
-    //         console.log(`[Proxy] ProxyRes: ${proxyRes}`);
-    //     },
+        },
+        proxyReq: (proxyReq, req, res) => {
+            // console.log(`[Proxy] Proxying ${req.method} request to: ${UPSTREAM_URL}${proxyReq.path}`);
+            req.upstreamStart = process.hrtime();
+        },
+        proxyRes: (proxyRes, req, res) => {
+            if (req.upstreamStart) {
+                const diff = process.hrtime(req.upstreamStart);
+                const upstreamTime = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
+                res.setHeader("X-Upstream-Time", `${upstreamTime}ms`);
+
+                console.log(`[Proxy] Upstream Latency: ${upstreamTime}ms`);
+            }
+        },
     }
 });
 
