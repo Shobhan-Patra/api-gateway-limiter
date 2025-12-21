@@ -6,6 +6,7 @@ import tokenBucket from "../logic/tokenBucket.js";
 import leakyBucket from "../logic/leakyBucket.js";
 
 const rateLimiter = async (req, res, next) => {
+    const startTime = Date.now();
     const clientIdentifier = req.ip;
 
     const rateLimiterType = req.headers['x-ratelimit-type'] ?? "fixedWindow";
@@ -54,6 +55,10 @@ const rateLimiter = async (req, res, next) => {
             message: `Rate limit of ${rateLimiterResult.maxLimit} requests per ${rateLimiterResult.windowSize}s exceeded`
         })
     }
+
+    const duration = Date.now() - startTime;
+    res.setHeader("Server-Timing", `gateway_logic;dur=${duration}`);
+    console.log("Rate limiter logic takes ", duration, "ms");
 
     next();
 }

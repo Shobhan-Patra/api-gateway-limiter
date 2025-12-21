@@ -35,18 +35,20 @@ async function measureRedisFetchLatency() {
 
     await redisStore.set('key', 'value');
     const value = await redisStore.get('key');
-    await redisStore.hSet('user-session:123', {
-        name: 'John',
-        surname: 'Smith',
-        company: 'Redis',
-        age: 29
-    })
-    let userSession = await redisStore.hGetAll('user-session:123');
+    // await redisStore.hSet('user-session:123', {
+    //     name: 'John',
+    //     surname: 'Smith',
+    //     company: 'Redis',
+    //     age: 29
+    // })
+    // let userSession = await redisStore.hGetAll('user-session:123');
 
     const stopTime = performance.now();
     console.log(value);
-    console.log(JSON.stringify(userSession, null, 2));
+    // console.log(JSON.stringify(userSession, null, 2));
     console.log(`Fetch duration: ${(stopTime - startTime).toFixed(3)} ms`);
 }
+
+await measureRedisFetchLatency();
 
 export { redisStore, connectRedis, closeRedis };

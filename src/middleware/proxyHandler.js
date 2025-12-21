@@ -1,6 +1,17 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
+import HttpAgent, {HttpsAgent} from "agentkeepalive";
 
 const UPSTREAM_URL = process.env.UPSTREAM_URL;
+const isHttps = UPSTREAM_URL.startsWith("https");
+
+const agentOptions = {
+    maxSockets: 100,
+    maxFreeSockets: 10,
+    timeout: 60000,
+    freeSocketTimeout: 30000,
+};
+
+const keepAliveAgent = isHttps ? new HttpsAgent(agentOptions) : new HttpAgent(agentOptions);
 
 function requestLogger(proxyServer, _) {
     proxyServer.on('proxyReq', (proxyReq, req, _) => {
@@ -19,7 +30,9 @@ const proxyMiddleware = createProxyMiddleware({
     headers: {
         'X-Gateway-Secret': process.env.GATEWAY_SECRET,
     },
+    agent: keepAliveAgent,
     plugins: [requestLogger],
+
     on: {
         error: (err, req, res) => {
             console.error(`[Proxy Error] ${err.message}`);
