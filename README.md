@@ -12,30 +12,46 @@ C --|Denied|--> B
 B --|429 Too Many Requests|--> A
 ```
 
-## Functions of a Gateway
-1. Sits on front of a server and forwards valid requests to it
+## Key features of this Gateway
+1. Forwards valid requests to upstream services.
 2. Limits incoming request to not overwhelm the server
-3. Can scale (using Redis) to protect multiple servers in a distributed backend structure
+3. Uses Redis to maintain state across multiple gateway instances.
+4. Implements `x-gateway-secret` handshake to ensure backends only accept traffic from this gateway.
+
+
+## Performance Metrics
+Deployed on Google Cloud Run (asia-south1) with a Redis Cloud instance in the same region.   
+Achieved sub-20ms internal latency by implementing the following optimizations:
+- TCP Connection Pooling: Utilized `agentkeepalive` to reuse upstream connections, eliminating SSL handshake overhead.
+- Region Colocation: Minimized network latency by strictly deploying compute and state in the same availability zone.
+
+Latency Breakdown (Production Logs):
+* **Redis Token Bucket Logic:** ~8ms
+* **Upstream Service Response:** ~10ms
+* **Total Gateway Overhead:** < 20ms
+![Latency headers proof](assets/performance_proof.png)
+
 
 ## How to run locally
-### Prerequisites: You need Node.js and a running Redis instance (local or cloud)
-### Approach 1: Using npm
+### Prerequisites:
+- Node.js 
+- Redis instance (local or cloud)
+### Approach 1: Manual Setup
 1. Clone and Install
    ```
    git clone https://github.com/Shobhan-Patra/api-gateway-limiter.git
    cd api-gateway-limiter
-   pnpm install // Can use npm install too
+   pnpm install // Can also use npm install
    ```
-2. Configure ```.env``` file:
+2. Configure `.env` file:
     ```
     PORT=8000
 
-    REDIS_USERNAME=default
-    REDIS_PASSWORD=
-    REDIS_HOST=
-    REDIS_PORT=
+    REDIS_URL=redis://[REDIS USERNAME]:[REDIS PASSWORD]@[REDIS HOST]:[REDIS PORT]
 
-    GATEWAY_SECRET=  
+   UPSTREAM_URL=[The server url this gateway will forward request to]
+   
+    GATEWAY_SECRET=[A strong secret to verify gateway-server connection]
     ```
 3. Start the gateway and dummy backend
    You need two terminals
@@ -49,10 +65,12 @@ This starts both the gateway and a mock backend server ([traefik/whoami](https:/
 ## How to test
 Send requests to the Gateway (Port 8000). It will forward them to the Backend (Port 5000) automatically.
  ```
-curl -i http://localhost:8000/test 
+curl -i http://localhost:8000/api/test 
 # Output: 200 OK | "Hello from Backend!"
 ```
 Spamming this request for multiple times (max limit is determined in config/constants.js) will result in `429 Too many requests` response
+
+
 
 ## Configuration
 The rate limit parameters for each algorithm can be configured in `config/constants.js`.\
@@ -62,9 +80,11 @@ You can adjust parameters such as:
 - Bucket Size and Token generation/leak rate (for token bucket and leaky bucket)
 
 ## Tech Stack
-- Runtime: Node.js (Express)
-- Store: Redis
-- Proxy: http-proxy-middleware
+- **Runtime**: Node.js (Express)
+- **State store**: Redis
+- **Proxy**: http-proxy-middleware
+- **Optimization**: agenkeepalive
+- **Deployment**: Docker, GCP
 - No external library is used to implement rate limiting algorithms
 
 ## The algorithms
