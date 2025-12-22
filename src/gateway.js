@@ -29,7 +29,11 @@ gateway.use(express.json());
 gateway.use(express.urlencoded());
 
 gateway.get("/test", (req, res) => {
-    res.status(200).json(new ApiResponse(200, req.ip));
+    const message = {
+        "Received request from IP: ": req.ip,
+        "To Test Rate limiting: ": "Send Requests to /api/test",
+    }
+    res.status(200).json(new ApiResponse(200, message, "Success"));
 })
 
 gateway.get('/healthcheck', (req, res) => {
