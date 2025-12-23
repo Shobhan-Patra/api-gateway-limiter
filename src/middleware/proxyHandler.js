@@ -1,5 +1,11 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
 import HttpAgent, {HttpsAgent} from "agentkeepalive";
+import {redisStore} from "../server.js";
+import {
+    CIRCUIT_FAILURE_THRESHOLD, CIRCUIT_TIMEOUT,
+    REDIS_UPSTREAM_FAILURE_COUNT_KEY,
+    REDIS_UPSTREAM_STATUS_KEY
+} from "../../config/constants.js";
 
 const UPSTREAM_URL = process.env.UPSTREAM_URL;
 const isHttps = UPSTREAM_URL.startsWith("https");
@@ -34,20 +40,36 @@ const proxyMiddleware = createProxyMiddleware({
     plugins: [requestLogger],
 
     on: {
-        error: (err, req, res) => {
+        error: async (err, req, res) => {
             console.error(`[Proxy Error] ${err.message}`);
-            res.writeHead(502, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Bad Gateway: Could not reach upstream server' }));
+
+            const currentFailureCount = await redisStore.incr(REDIS_UPSTREAM_FAILURE_COUNT_KEY);
+            if (currentFailureCount > CIRCUIT_FAILURE_THRESHOLD) {
+                const isUpstreamOpen = await redisStore.get(REDIS_UPSTREAM_STATUS_KEY);
+                if (isUpstreamOpen !== "false") {
+                    await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "false", {
+                        EX: CIRCUIT_TIMEOUT
+                    });
+                    console.warn(`[CIRCUIT BREAKER] Circuit tripped opened, blocking all requests for the next ${CIRCUIT_TIMEOUT}s`);
+                }
+            }
+
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Service Unavailable: Could not reach upstream server' }));
         },
         proxyReq: (proxyReq, req, res) => {
-            // console.log(`[Proxy] Proxying ${req.method} request to: ${UPSTREAM_URL}${proxyReq.path}`);
             req.upstreamStart = process.hrtime();
         },
-        proxyRes: (proxyRes, req, res) => {
+        proxyRes: async (proxyRes, req, res) => {
             if (req.upstreamStart) {
                 const diff = process.hrtime(req.upstreamStart);
                 const upstreamTime = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
                 res.setHeader("X-Upstream-Time", `${upstreamTime}ms`);
+
+                // Upstream server is working fine if the gateway is receiving responses from upstream
+                await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "true");
+                await redisStore.set(REDIS_UPSTREAM_FAILURE_COUNT_KEY, 0);
+                console.log("Circuit breaker reset successfully");
 
                 console.log(`[Proxy] Upstream Latency: ${upstreamTime}ms`);
             }

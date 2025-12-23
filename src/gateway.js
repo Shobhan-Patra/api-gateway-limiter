@@ -2,6 +2,7 @@ import express from "express";
 import {ApiResponse} from "./utils/ApiResponse.js";
 import {ApiError} from "./utils/ApiError.js";
 import rateLimiter from "./middleware/rateLimiter.js";
+import circuitBreaker from "./middleware/circuitBreaker.js";
 import proxyMiddleware from "./middleware/proxyHandler.js";
 
 const gateway = express();
@@ -22,6 +23,7 @@ const totalTimeLogger = async (req, res, next) => {
 }
 
 gateway.use(totalTimeLogger);
+gateway.use('/api', circuitBreaker);
 gateway.use('/api', rateLimiter);
 gateway.use('/api', proxyMiddleware);
 
