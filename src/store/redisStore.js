@@ -3,14 +3,22 @@ import { performance } from 'perf_hooks'
 
 const redisStore = createClient({
     url: process.env.REDIS_URL,
+    socket: {
+        reconnectStrategy: false
+    }
 });
-redisStore.on('error', err => console.log('Redis Client Error', err));
+redisStore.on('error', err => {
+    console.error(`[FATAL] Redis Client Error: ${err.message}`);
+    console.error("Shutting down the API Gateway because Redis is unreachable.");
+
+    process.exit(1);
+});
 
 async function connectRedis() {
     if (!redisStore.isOpen) {
         try {
             await redisStore.connect();
-            console.log('Redis Client Connected');
+            console.log('[Redis] Client Connected');
         } catch (error) {
             console.error("Error connecting to Redis Client: ", error);
         }
