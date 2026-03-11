@@ -6,9 +6,11 @@ let redisStore;
 
 async function startServer() {
     try {
+        redisStore = await connectRedis();
+        console.log("Redis store started");
+
         gateway.listen(PORT, async () => {
-            redisStore = await connectRedis();
-            console.log(`Gateway listening at http://localhost:${process.env.PORT}`);
+            console.log(`Gateway listening at http://localhost:${PORT}`);
         })
     } catch (error) {
         console.error(error);
