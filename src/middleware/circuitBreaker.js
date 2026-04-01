@@ -1,4 +1,4 @@
-import {redisStore} from "../server.js";
+import {redisStore} from "../store/redisStore.js";
 import {REDIS_UPSTREAM_STATUS_KEY} from "../../config/constants.js";
 import {asyncHandler} from "../utils/asyncHandler.js";
 

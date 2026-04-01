@@ -1,62 +1,18 @@
-import { createClient } from 'redis';
-import { performance } from 'perf_hooks'
+import {Redis} from 'ioredis';
 
-const redisStore = createClient({
-    url: process.env.REDIS_URL,
-    socket: {
-        reconnectStrategy: false
-    }
+const redisStore = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: 3,
 });
+
 redisStore.on('error', err => {
     console.error(`[FATAL] Redis Client Error: ${err.message}`);
     console.error("Shutting down the API Gateway because Redis is unreachable.");
-
+    // Fail fast strategy
     process.exit(1);
 });
 
-async function connectRedis() {
-    if (!redisStore.isOpen) {
-        try {
-            await redisStore.connect();
-            console.log('[Redis] Client Connected');
-        } catch (error) {
-            console.error("Error connecting to Redis Client: ", error);
-        }
-    }
-    return redisStore;
-}
+redisStore.on('connect', () => {
+    console.log(`[REDIS] Client Connected`);
+})
 
-async function closeRedis() {
-    if (redisStore.isOpen) {
-        try {
-            await redisStore.quit();
-            console.log('Redis Client Disconnected');
-        } catch (error) {
-            console.error("Error disconnecting to Redis Client: ", error);
-        }
-    }
-}
-
-async function measureRedisFetchLatency() {
-    const redisStore = await connectRedis();
-    const startTime = performance.now();
-
-    await redisStore.set('key', 'value');
-    const value = await redisStore.get('key');
-    // await redisStore.hSet('user-session:123', {
-    //     name: 'John',
-    //     surname: 'Smith',
-    //     company: 'Redis',
-    //     age: 29
-    // })
-    // let userSession = await redisStore.hGetAll('user-session:123');
-
-    const stopTime = performance.now();
-    console.log(value);
-    // console.log(JSON.stringify(userSession, null, 2));
-    console.log(`Fetch duration: ${(stopTime - startTime).toFixed(3)} ms`);
-}
-
-// await measureRedisFetchLatency();
-
-export { redisStore, connectRedis, closeRedis };
+export { redisStore };

@@ -1,6 +1,6 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
 import HttpAgent, {HttpsAgent} from "agentkeepalive";
-import {redisStore} from "../server.js";
+import {redisStore} from "../store/redisStore.js";
 import {
     CIRCUIT_FAILURE_THRESHOLD, CIRCUIT_TIMEOUT,
     REDIS_UPSTREAM_FAILURE_COUNT_KEY,

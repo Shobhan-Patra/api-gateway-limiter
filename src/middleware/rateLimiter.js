@@ -1,5 +1,5 @@
 import {BUCKET_SIZE, LEAK_RATE, MAX_LIMIT, REFILL_RATE, WINDOW_SIZE_IN_SECONDS} from "../../config/constants.js";
-import { redisStore } from "../server.js";
+import {redisStore} from "../store/redisStore.js";
 import checkfixedWindowLimit from "../logic/fixedWindow.js";
 import checkSlidingWindowLimit from "../logic/slidingWindow.js";
 import tokenBucket from "../logic/tokenBucket.js";
