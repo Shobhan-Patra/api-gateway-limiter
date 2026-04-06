@@ -1,5 +1,5 @@
 async function tokenBucket(redisStore, key, refillRate, bucketCapacity) {
-    const data = await redisStore.hGetAll(key);
+    const data = await redisStore.hgetall(key);
 
     const currentTimeInMs = Date.now();
 
@@ -23,7 +23,7 @@ async function tokenBucket(redisStore, key, refillRate, bucketCapacity) {
         isAllowed = true;
     }
 
-    await redisStore.hSet(key, {
+    await redisStore.hset(key, {
         tokens: tokens.toString(),
         lastRefill: lastRefill.toString(),
     });

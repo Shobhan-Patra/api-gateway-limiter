@@ -1,5 +1,5 @@
 async function leakyBucket(redisStore, key, leakRate, bucketCapacity) {
-    const data = await redisStore.hGetAll(key);
+    const data = await redisStore.hgetall(key);
 
     const currentTimeInMs = Date.now();
 
@@ -23,7 +23,7 @@ async function leakyBucket(redisStore, key, leakRate, bucketCapacity) {
         isAllowed = true;
     }
 
-    await redisStore.hSet(key, {
+    await redisStore.hset(key, {
         drops: drops.toString(),
         lastLeak: lastLeak.toString(),
     });
