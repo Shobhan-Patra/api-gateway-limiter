@@ -30,7 +30,7 @@ gateway.use('/api', proxyMiddleware);
 gateway.use(express.json());
 gateway.use(express.urlencoded());
 
-gateway.get("/test", (req, res) => {
+gateway.get(['/', '/test'], (req, res) => {
     const message = {
         "Received request from IP: ": req.ip,
         "To Test Rate limiting: ": "Send Requests to /api/test",
@@ -42,6 +42,7 @@ gateway.get('/healthcheck', (req, res) => {
     res.status(200).json(new ApiResponse(200, "Gateway working fine!"));
 })
 
+// Catchall route handler
 gateway.use((req, res) => {
     res.status(404).json(new ApiError(400, 'Not Found or Proxy Target Unavailable'));
 });

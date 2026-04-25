@@ -7,18 +7,18 @@ const luaScript = `
     return {current, ttl}
 `;
 
-async function checkfixedWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
+async function checkfixedWindowLimit(redisStore, key, rateLimitConfig) {
     const nowInSeconds = Math.floor(Date.now() / 1000);
-    const windowStartTime = Math.floor(nowInSeconds / WINDOW_SIZE_IN_SECONDS) * WINDOW_SIZE_IN_SECONDS;
+    const windowStartTime = Math.floor(nowInSeconds / rateLimitConfig.window) * rateLimitConfig.window;
     const windowKey = `${key}:${windowStartTime}`;
 
-    const [count, ttl] = await redisStore.eval(luaScript, 1, windowKey, WINDOW_SIZE_IN_SECONDS);
+    const [count, ttl] = await redisStore.eval(luaScript, 1, windowKey, rateLimitConfig.window);
 
-    const isAllowed = count <= MAX_REQUESTS;
+    const isAllowed = count <= rateLimitConfig.limit;
 
     return {
         allowed: isAllowed,
-        remaining: isAllowed ? MAX_REQUESTS - count : 0,
+        remaining: isAllowed ? rateLimitConfig.limit - count : 0,
         message: isAllowed ? "Request allowed" : "Too many requests",
         resetTime: `${ttl} seconds`
     }

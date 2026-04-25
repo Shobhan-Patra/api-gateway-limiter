@@ -1,5 +1,8 @@
-async function leakyBucket(redisStore, key, leakRate, bucketCapacity) {
+async function leakyBucket(redisStore, key, rateLimitConfig) {
     const data = await redisStore.hgetall(key);
+
+    const bucketSize = parseInt(rateLimitConfig.bucketSize, 10);
+    const leakRate = parseInt(rateLimitConfig.leakRate, 10);
 
     const currentTimeInMs = Date.now();
 
@@ -18,7 +21,7 @@ async function leakyBucket(redisStore, key, leakRate, bucketCapacity) {
     }
 
     let isAllowed = false;
-    if (drops + 1 < bucketCapacity) {
+    if (drops + 1 < bucketSize) {
         drops += 1;
         isAllowed = true;
     }
@@ -32,7 +35,7 @@ async function leakyBucket(redisStore, key, leakRate, bucketCapacity) {
 
     return {
         allowed: isAllowed,
-        remaining: isAllowed ? Math.floor(bucketCapacity - drops) : 0,
+        remaining: isAllowed ? Math.floor(bucketSize - drops) : 0,
         message: isAllowed ? "Request allowed" : "Too many requests",
         resetTime: isAllowed ? 0 : (1 / leakRate)
     };

@@ -30,7 +30,7 @@ const slidingWindowLimit = `
     }
 `;
 
-async function checkSlidingWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZE_IN_SECONDS) {
+async function checkSlidingWindowLimit(redisStore, key, rateLimitConfig) {
     const currentTimeInMs = Date.now();
 
     const [isAllowed, remaining, resetTime] = await redisStore.eval(
@@ -38,8 +38,8 @@ async function checkSlidingWindowLimit(redisStore, key, MAX_REQUESTS, WINDOW_SIZ
         1,
         key,
         currentTimeInMs,
-        WINDOW_SIZE_IN_SECONDS,
-        MAX_REQUESTS
+        rateLimitConfig.window,
+        rateLimitConfig.limit
     );
 
     return {

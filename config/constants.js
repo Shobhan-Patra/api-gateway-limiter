@@ -10,3 +10,5 @@ export const REDIS_UPSTREAM_STATUS_KEY = 'circuit:upstream_status';
 export const REDIS_UPSTREAM_FAILURE_COUNT_KEY = 'circuit:upstream_failure_count';
 export const CIRCUIT_FAILURE_THRESHOLD = 10;
 export const CIRCUIT_TIMEOUT = 30;
+
+export const NUMBER_OF_API_KEYS = 10;
