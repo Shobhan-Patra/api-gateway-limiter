@@ -46,10 +46,8 @@ const proxyMiddleware = createProxyMiddleware({
             const currentFailureCount = await redisStore.incr(REDIS_UPSTREAM_FAILURE_COUNT_KEY);
             if (currentFailureCount > CIRCUIT_FAILURE_THRESHOLD) {
                 const isUpstreamOpen = await redisStore.get(REDIS_UPSTREAM_STATUS_KEY);
-                if (isUpstreamOpen !== "false") {
-                    await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "false", {
-                        EX: CIRCUIT_TIMEOUT
-                    });
+                if (isUpstreamOpen !== "down") {
+                    await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "down", "EX", CIRCUIT_TIMEOUT);
                     console.warn(`[CIRCUIT BREAKER] Circuit tripped opened, blocking all requests for the next ${CIRCUIT_TIMEOUT}s`);
                 }
             }
@@ -67,7 +65,7 @@ const proxyMiddleware = createProxyMiddleware({
                 res.setHeader("X-Upstream-Time", `${upstreamTime}ms`);
 
                 // Upstream server is working fine if the gateway is receiving responses from upstream
-                await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "true");
+                await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "up");
                 await redisStore.set(REDIS_UPSTREAM_FAILURE_COUNT_KEY, 0);
                 console.log("Circuit breaker reset successfully");
 

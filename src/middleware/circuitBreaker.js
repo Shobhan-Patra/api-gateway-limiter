@@ -5,7 +5,7 @@ import {asyncHandler} from "../utils/asyncHandler.js";
 const circuitBreaker = asyncHandler(async (req, res, next) => {
     const isUpstreamOpen = await redisStore.get(REDIS_UPSTREAM_STATUS_KEY);
 
-    if (isUpstreamOpen === "false") {
+    if (isUpstreamOpen === "down") {
 
         const ttl = await redisStore.ttl(REDIS_UPSTREAM_STATUS_KEY);
         res.setHeader('Retry-After', ttl);
