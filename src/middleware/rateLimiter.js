@@ -6,20 +6,30 @@ import leakyBucket from "../logic/leakyBucket.js";
 
 const rateLimiter = async (req, res, next) => {
     const startTime = Date.now();
-    const apiKey = req.headers["x-api-key"];
-    if (!apiKey) {
-        return res.status(400).json({
-            status: 400,
-            message: "Missing API key"
-        });
+
+    const clientIP = req.ip;
+    const ipRateLimitConfig = {
+        tier: "free",
+        algorithm: "fixedWindow",
+        limit: 60,
+        window: 60,
+        status: "active"
     }
 
-    const rateLimitConfig = await redisStore.hgetall(`api_key:${apiKey}`);
-    if (!rateLimitConfig || rateLimitConfig.status !== "active") {
-        return res.status(403).json({
-            status: 403,
-            message: "Invalid API Key"
-        });
+    let rateLimitConfig;
+    const apiKey = req.headers["x-api-key"];
+    if (apiKey) {
+        rateLimitConfig = await redisStore.hgetall(`api_key:${apiKey}`);
+        if (!rateLimitConfig || rateLimitConfig.status !== "active") {
+            return res.status(403).json({
+                status: 403,
+                message: "Invalid API Key"
+            });
+        }
+    }
+    else {
+        console.log("No API key provided; Using Client IP to rate limit");
+        rateLimitConfig = ipRateLimitConfig;
     }
 
     const rateLimiterType = rateLimitConfig.algorithm || "fixedWindow";
@@ -67,7 +77,7 @@ const rateLimiter = async (req, res, next) => {
     }
 
     const duration = Date.now() - startTime;
-    res.setHeader("X-Redis-Time", duration);
+    res.setHeader("X-Redis-Time", `${duration} ms`);
     console.log("Rate limiter logic takes ", duration, "ms");
 
     next();

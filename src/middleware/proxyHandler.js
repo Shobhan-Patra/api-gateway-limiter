@@ -62,7 +62,7 @@ const proxyMiddleware = createProxyMiddleware({
             if (req.upstreamStart) {
                 const diff = process.hrtime(req.upstreamStart);
                 const upstreamTime = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
-                res.setHeader("X-Upstream-Time", `${upstreamTime}ms`);
+                res.setHeader("X-Upstream-Time", `${upstreamTime} ms`);
 
                 // Upstream server is working fine if the gateway is receiving responses from upstream
                 await redisStore.set(REDIS_UPSTREAM_STATUS_KEY, "up");

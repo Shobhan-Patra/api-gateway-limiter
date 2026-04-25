@@ -15,7 +15,7 @@ const totalTimeLogger = async (req, res, next) => {
         const diff = process.hrtime(start);
         const totalTime = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
 
-        res.setHeader("X-Gateway-Total-Time", `${totalTime}ms`);
+        res.setHeader("X-Gateway-Total-Time", `${totalTime} ms`);
 
         return originalWriteHead.apply(this, args);
     }
